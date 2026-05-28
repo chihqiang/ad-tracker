@@ -25,15 +25,14 @@ npm install @chihqiang/ad-tracker
   const { AdTracker: AdTrackerClass, TencentPlatform } = AdTracker
 
   const tracker = new AdTrackerClass({
-    handler: async (platform, tag, payload) => {
+    handler: async (platform, payload) => {
       const res = await fetch('https://your-server.com/api/ad/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform, tag, ...payload }),
+        body: JSON.stringify({ platform, ...payload }),
       })
       return res.json()
     },
-  })
 
   tracker.use(new TencentPlatform())
   tracker.init()
@@ -42,7 +41,6 @@ npm install @chihqiang/ad-tracker
 
 <!-- 其他页面/模块通过 window.tracker 上报 -->
 <script>
-  // 上报注册事件
   window.tracker.report({ action_type: AdTracker.ActionType.REGISTER })
   window.tracker.report({ action_type: AdTracker.ActionType.RESERVATION })
   window.tracker.report({ action_type: AdTracker.ActionType.PURCHASE })
@@ -59,11 +57,11 @@ npm install @chihqiang/ad-tracker
 import { AdTracker, TencentPlatform, ActionType } from 'https://esm.sh/@chihqiang/ad-tracker@latest'
 
 const tracker = new AdTracker({
-  handler: async (platform, tag, payload) => {
+  handler: async (platform, payload) => {
     const res = await fetch('https://your-server.com/api/ad/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform, tag, ...payload }),
+      body: JSON.stringify({ platform, ...payload }),
     })
     return res.json()
   },
@@ -90,11 +88,11 @@ import { AdTracker } from 'https://cdn.jsdelivr.net/npm/@chihqiang/ad-tracker@la
 import { AdTracker, TencentPlatform, ActionType } from '@chihqiang/ad-tracker'
 
 const tracker = new AdTracker({
-  handler: async (platform, tag, payload) => {
+  handler: async (platform, payload) => {
     const res = await fetch('https://your-server.com/api/ad/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform, tag, ...payload }),
+      body: JSON.stringify({ platform, ...payload }),
     })
     return res.json()
   },
@@ -116,7 +114,7 @@ await tracker.report({
 
 1. 用户通过广告链接进入页面，`init()` 匹配所有已注册平台，缓存参数到 `localStorage`，key 为 `AD_PARAMS_{平台名}`（全大写）
 2. 用户在项目中调用 `tracker.report()` 传入转化事件
-3. SDK 遍历所有已注册平台，逐个检查是否有缓存参数，有则调用 `handler` 回调，传入 `(platform, tag, payload)`
+3. SDK 遍历所有已注册平台，逐个检查是否有缓存参数，有则调用 `handler` 回调，传入 `(platform, payload)`
 4. 用户在自己的 `handler` 中决定如何发送数据（fetch / axios / 本地存储等）
 
 ## API
@@ -139,7 +137,7 @@ enum ActionType {
 import { AdTracker } from '@chihqiang/ad-tracker'
 
 const tracker = new AdTracker({
-  handler?: ReportHandler   // 上报回调，接收 (platform, tag, payload)
+  handler?: ReportHandler   // 上报回调，接收 (platform, payload)
   storage?: IStorage        // 存储方式，默认 localStorage（浏览器）或内存
   debug?: boolean           // 开启调试日志，默认 false
   getUid?: GetUid           // 获取 uid 的回调，传入平台名，返回 Promise<string | number>
@@ -216,23 +214,22 @@ const payload = await platform.buildPayload({
   action_type: ActionType.REGISTER,
   value: 9900,
 })
-// payload: { params: {...}, action_type: 'REGISTER', action_time: ..., uid: ..., uuid: ..., options: { tag?, match? } }
+// payload: { params: {...}, action_type: 'REGISTER', action_time: ..., uid: ..., uuid: ..., options: { tag: 'app1' } }
 ```
 
 ### ReportHandler
 
-`handler` 接收 `(platform, tag, payload)` 后自由处理（发送请求、写入队列等）。
+`handler` 接收 `(platform, payload)` 后自由处理（发送请求、写入队列等）。
 
 ```typescript
 const tracker = new AdTracker({
-  async handler(platform, tag, payload) {
+  async handler(platform, payload) {
     // platform: 'tencent'
-    // tag: 'app1' | undefined
     // payload: { params, action_type, action_time, uid?, uuid?, options?, ...event }
     const res = await fetch('https://your-server.com/api/ad/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform, tag, ...payload }),
+      body: JSON.stringify({ platform, ...payload }),
     })
     return res.json()
   },
