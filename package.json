@@ -1,0 +1,66 @@
+{
+  "name": "@chihqiang/ad-tracker",
+  "version": "0.0.1",
+  "description": "ad-tracker 是一款轻量的 TypeScript 广告追踪 SDK。可自动解析链接中的广告参数、缓存数据并完成上报，兼容各类主流广告平台，接入简单、扩展性强。",
+  "scripts": {
+    "build": "tsup",
+    "test": "jest",
+    "format": "prettier --write src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "run-s format typecheck test build"
+  },
+  "sideEffects": false,
+  "keywords": [
+    "ad",
+    "tracking",
+    "ads",
+    "tencent",
+    "oceanengine",
+    "conversion",
+    "typescript"
+  ],
+  "author": "chihqiang",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/uuid": "^10.0.0",
+    "jest": "^30.4.2",
+    "npm-run-all2": "^8.0.4",
+    "prettier": "^3.8.3",
+    "ts-jest": "^29.4.11",
+    "tslib": "^2.8.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chihqiang/ad-tracker.git"
+  },
+  "homepage": "https://github.com/chihqiang/ad-tracker#readme",
+  "jsdelivr": "https://cdn.jsdelivr.net/npm/@chihqiang/ad-tracker@latest/dist/index.global.js",
+  "unpkg": "https://unpkg.com/@chihqiang/ad-tracker@latest/dist/index.global.js",
+  "bugs": {
+    "url": "https://github.com/chihqiang/ad-tracker/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
