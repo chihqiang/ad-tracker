@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>ad-tracker demo</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <script src='dist/index.global.js'></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 24px;
+      color: #333;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+    .card h2 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #666;
+    }
+    button {
+      padding: 6px 14px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+    button:hover {
+      background: #f0f0f0;
+    }
+    pre {
+      background: #f9f9f9;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 10px;
+      font-size: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .tag {
+      display: inline-block;
+      background: #e8f0fe;
+      color: #1967d2;
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-right: 4px;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .row .card {
+      flex: 1;
+      min-width: 280px;
+    }
+    .log-entry {
+      font-size: 12px;
+      padding: 3px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🧪 ad-tracker demo</h1>
+
+  <div class="row">
+    <div class="card">
+      <h2>SDK 状态</h2>
+      <div id="status">加载中…</div>
+    </div>
+
+    <div class="card">
+      <h2>匹配结果</h2>
+      <pre id="match-result">等待 init()…</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>上报事件</h2>
+    <button onclick="report(0)">REGISTER</button>
+    <button onclick="report(1)">RESERVATION</button>
+    <button onclick="report(2)">PURCHASE</button>
+    <button onclick="report(3)">CLAIM_OFFER</button>
+    <button onclick="report(4)">VIEW</button>
+  </div>
+
+  <div class="card">
+    <h2>日志</h2>
+    <pre id="logs">// 暂无日志</pre>
+  </div>
+
+  <script>
+    const { AdTracker: AdTrackerClass, TencentPlatform, OceanEnginePlatform, ActionType } = AdTracker
+
+    const logEl = document.getElementById('logs')
+    const statusEl = document.getElementById('status')
+    const matchEl = document.getElementById('match-result')
+
+    function log(msg) {
+      const text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)
+      const entry = document.createElement('div')
+      entry.className = 'log-entry'
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${text}`
+      logEl.appendChild(entry)
+      logEl.scrollTop = logEl.scrollHeight
+    }
+
+    const tracker = new AdTrackerClass({
+      debug: true,
+      handler: async (platform, payload) => {
+        log(`handler 收到 [${platform}]: ${JSON.stringify(payload)}`)
+        return true
+      },
+    })
+
+    tracker.use(new TencentPlatform())
+    tracker.use(new OceanEnginePlatform())
+
+    const matched = tracker.init()
+
+    statusEl.innerHTML = `
+      <div>平台数: <span class="tag">${tracker.platforms?.length ?? 0}</span></div>
+      <div>匹配平台: ${matched.length ? matched.map(n => `<span class="tag">${n}</span>`).join('') : '<span class="tag" style="background:#fce8e6;color:#c5221f">未匹配</span>'}</div>
+    `
+
+    matchEl.textContent = matched.length
+      ? `匹配到平台: ${matched.join(', ')}`
+      : '当前 URL 未匹配任何广告平台'
+
+    window.tracker = tracker
+
+    function report(actionType) {
+      const name = Object.entries(ActionType).find(([, v]) => v === actionType)?.[0] ?? actionType
+      log(`触发上报 [${name}]`)
+      tracker.report({ action_type: actionType }).catch(err => log(`上报失败: ${err.message}`))
+    }
+  </script>
+
+</body>
+
+</html>

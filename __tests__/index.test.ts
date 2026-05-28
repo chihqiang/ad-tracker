@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-jest.mock('uuid', () => ({ v4: () => '00000000-0000-0000-0000-000000000000' }))
+jest.mock('../src/Uuid', () => ({ genUuid: () => '00000000-0000-0000-0000-000000000000' }))
 
 import { AdTracker, TencentPlatform, OceanEnginePlatform, MemoryStorage, ActionType, UrlResolver } from '../src'
 import type { PageLocation } from '../src/UrlResolver'

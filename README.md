@@ -33,6 +33,7 @@ npm install @chihqiang/ad-tracker
       })
       return res.json()
     },
+  })
 
   tracker.use(new TencentPlatform())
   tracker.init()
@@ -306,6 +307,18 @@ interface PageLocation {
 1. `resolver.getPageFromUrl(url)` 解析传入 URL，或 `resolver.getCurrentPage()` 自动获取当前页面，得到 `PageLocation`
 2. 遍历已注册平台，调用 `platform.match(page)` — 优先用 `options.match`，否则走 `defaultMatch()`
 3. 匹配成功的平台调用 `platform.savePage(page)` — 从 `page.query` 提取参数，过滤 `ad` 后缓存
+
+### genUuid
+
+UUID v4 生成函数，自实现无外部依赖。
+
+```typescript
+import { genUuid } from '@chihqiang/ad-tracker'
+
+const id = genUuid()  // 'ae988a05-3cfd-46c2-b640-586a26273a0a'
+```
+
+优先使用 `crypto.randomUUID()`，降级到 `crypto.getRandomValues()`，兜底 `Math.random()`。
 
 ## 内置平台
 

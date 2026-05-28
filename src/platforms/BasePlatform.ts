@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
+import { genUuid } from "../Uuid";
 import { ActionType } from "../ActionType";
 import type { IStorage } from "../Storage";
 import type { PageLocation } from "../UrlResolver";
@@ -182,7 +182,7 @@ export abstract class BasePlatform implements Platform {
       return null;
     }
     const uid = this.getUid ? await this.getUid(this.name) : undefined;
-    const uuid = uuidv4();
+    const uuid = genUuid();
     const { match, ...payloadOptions } = this.options;
     return {
       ...event,
@@ -209,7 +209,7 @@ export abstract class BasePlatform implements Platform {
       this.log("report", "skipped, no stored params");
       return;
     }
-    this.log("report", payload);
+    this.log("report2", payload);
     try {
       const result = await this.handler(this.name, payload);
       this.log("report", "handler result:", result);
