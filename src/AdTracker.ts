@@ -1,6 +1,7 @@
 import { createDefaultStorage } from "./Storage";
 import type { IStorage } from "./Storage";
-import { UrlResolver } from "./UrlResolver";
+import { getLocationPage, type PageLocation } from "./PageLocation";
+import { Logger, LogLevel } from "./Logger";
 import type { Event, Platform, ReportHandler, GetUid } from "./platforms/BasePlatform";
 
 /** AdTracker 配置 */
@@ -8,8 +9,8 @@ export interface Config {
   storage?: IStorage
   handler?: ReportHandler
   debug?: boolean
+  logger?: Logger
   getUid?: GetUid
-  urlResolver?: UrlResolver
 }
 
 /**
@@ -25,73 +26,70 @@ export class AdTracker {
   private storage: IStorage;
   private handler?: ReportHandler;
   private getUid?: GetUid;
-  private debug: boolean;
-  private urlResolver: UrlResolver;
+  private logger: Logger;
+  private pageLocation?: PageLocation;
 
   constructor(config: Config = {}) {
     this.storage = config.storage ?? createDefaultStorage();
     this.handler = config.handler;
     this.getUid = config.getUid;
-    this.debug = config.debug ?? false;
-    this.urlResolver = config.urlResolver ?? new UrlResolver();
-  }
-
-  /** 调试日志 */
-  private log(method: string, ...args: unknown[]): void {
-    if (this.debug) {
-      console.log(`[ad-tracker] AdTracker.${method} -`, ...args);
-    }
+    this.logger = config.logger ?? new Logger("main", config.debug ? LogLevel.DEBUG : LogLevel.NONE);
   }
 
   /**
    * 注册平台适配器
-   * 自动注入 storage / handler / getUid / debug 配置，重复注册自动跳过
+   * 自动注入 storage / handler / getUid / logger 配置，重复注册自动跳过
    */
   use(platform: Platform): this {
     if (this.platforms.some((p) => p.storageKey === platform.storageKey)) {
-      this.log("use", `${platform.storageKey} already registered`);
+      this.logger.debug("注册平台适配器：检测到重复注册，自动跳过", { key: platform.storageKey });
       return this;
     }
     platform.configure({
       storage: this.storage,
       handler: this.handler,
       getUid: this.getUid,
-      debug: this.debug,
+      logLevel: this.logger.getLevel(),
     });
     this.platforms.push(platform);
-    this.log("use", platform.storageKey);
+    this.logger.debug("注册平台适配器", { key: platform.storageKey, name: platform.name });
     return this;
   }
 
   /**
-   * 解析 URL 并匹配平台，将参数存储到各平台
-   * @param url - 广告点击 URL，默认读取 window.location.href
+   * 解析页面并匹配平台，将参数存储到各平台
+   * @param page - 页面结构化信息，默认读取 window.location
    * @returns 匹配到的平台名列表
    */
-  init(url?: string): string[] {
+  init(page?: PageLocation): this {
+    const target = page ?? getLocationPage();
+
     if (this.platforms.length === 0) {
-      this.log("init", "no platforms registered");
-      return [];
+      this.logger.debug("页面匹配检查：暂无已注册平台适配器", target);
+      return this;
     }
-
-    const page = url ? this.urlResolver.getPageFromUrl(url) : this.urlResolver.getCurrentPage();
-    if (!page) {
-      this.log("init", "no page available");
-      return [];
+    if (!target) {
+      this.logger.debug("页面匹配检查：无法获取当前页面信息");
+      return this;
     }
+    this.pageLocation = target;
 
-    this.log("init", page.href);
-    const matched: string[] = [];
-
+    this.logger.debug("页面URL解析匹配", target);
     for (const platform of this.platforms) {
-      if (platform.match(page)) {
-        platform.savePage(page);
-        matched.push(platform.name);
+      if (platform.match(target)) {
+        platform.savePage(target);
       }
     }
 
-    this.log("init", "matched", matched);
-    return matched;
+    return this;
+  }
+
+  dispose(): void {
+    for (const platform of this.platforms) {
+      platform.dispose()
+    }
+    this.platforms.length = 0
+    this.logger.dispose()
   }
 
   /**
@@ -100,16 +98,14 @@ export class AdTracker {
    */
   async report(event: Event): Promise<void> {
     if (!this.handler) {
-      this.log("report", "skipped, no handler configured");
+      this.logger.warn("handler 未配置，跳过上报", event);
       return;
     }
     const enriched = event.current_url
       ? event
-      : { ...event, current_url: this.urlResolver.getCurrentUrl() }
-    this.log("report", enriched);
-    for (const platform of this.platforms) {
-      await platform.report(enriched);
-    }
+      : { ...event, current_url: this.pageLocation?.href ?? "" };
+    this.logger.debug("转换事件上报", enriched);
+    await Promise.all(this.platforms.map((p) => p.report(enriched)));
   }
 
 }

@@ -1,6 +1,6 @@
 import { BasePlatform } from "./BasePlatform";
 import { ActionType } from "../ActionType";
-import type { PageLocation } from "../UrlResolver";
+import type { PageLocation } from "../PageLocation";
 
 /**
  * 巨量引擎（OceanEngine）广告平台适配器

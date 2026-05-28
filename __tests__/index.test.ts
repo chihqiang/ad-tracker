@@ -2,31 +2,35 @@
 
 jest.mock('../src/Uuid', () => ({ genUuid: () => '00000000-0000-0000-0000-000000000000' }))
 
-import { AdTracker, TencentPlatform, OceanEnginePlatform, MemoryStorage, ActionType, UrlResolver } from '../src'
-import type { PageLocation } from '../src/UrlResolver'
-
-function page(url: string): PageLocation {
-  return new UrlResolver('browser').getPageFromUrl(url)!
-}
+import { AdTracker, TencentPlatform, OceanEnginePlatform, MemoryStorage, ActionType, toPage } from '../src'
 
 describe('AdTracker', () => {
   const tencentClickUrl =
     'https://example.com/click?ad=tencent&click_id=24oi6xq2aaakvagnqu7a&account_id=9471147&click_time=1586437362'
 
   it('should match and store Tencent params', () => {
-    const tracker = new AdTracker({ storage: new MemoryStorage() })
+    const storage = new MemoryStorage()
+    const tracker = new AdTracker({ storage })
     tracker.use(new TencentPlatform())
 
-    const matched = tracker.init(tencentClickUrl)
-    expect(matched).toEqual(['tencent'])
+    tracker.init(toPage(tencentClickUrl))
+
+    const raw = storage.get('AD_PARAMS_TENCENT')
+    expect(raw).toBeTruthy()
+    const params = JSON.parse(raw!)
+    expect(params.account_id).toBe('9471147')
+    expect(params.click_id).toBe('24oi6xq2aaakvagnqu7a')
   })
 
   it('should return empty for non-ad URLs', () => {
-    const tracker = new AdTracker({ storage: new MemoryStorage() })
+    const storage = new MemoryStorage()
+    const tracker = new AdTracker({ storage })
     tracker.use(new TencentPlatform())
 
-    const matched = tracker.init('https://example.com/page?foo=bar')
-    expect(matched).toEqual([])
+    tracker.init(toPage('https://example.com/page?foo=bar'))
+
+    const raw = storage.get('AD_PARAMS_TENCENT')
+    expect(raw).toBeFalsy()
   })
 
   it('should store params per platform key', () => {
@@ -34,7 +38,7 @@ describe('AdTracker', () => {
     const tracker = new AdTracker({ storage })
     tracker.use(new TencentPlatform())
 
-    tracker.init(tencentClickUrl)
+    tracker.init(toPage(tencentClickUrl))
 
     const raw = storage.get('AD_PARAMS_TENCENT')
     expect(raw).toBeTruthy()
@@ -48,7 +52,7 @@ describe('AdTracker', () => {
   it('should not throw when report called without handler', async () => {
     const tracker = new AdTracker({ storage: new MemoryStorage() })
     tracker.use(new TencentPlatform())
-    tracker.init(tencentClickUrl)
+    tracker.init(toPage(tencentClickUrl))
 
     await expect(tracker.report({ action_type: ActionType.REGISTER })).resolves.toBeUndefined()
   })
@@ -70,7 +74,7 @@ describe('AdTracker', () => {
 
     const tracker = new AdTracker({ storage: new MemoryStorage(), handler })
     tracker.use(new TencentPlatform())
-    tracker.init(tencentClickUrl)
+    tracker.init(toPage(tencentClickUrl))
 
     await tracker.report({ action_type: ActionType.REGISTER, value: 9900 })
 
@@ -91,15 +95,15 @@ describe('TencentPlatform', () => {
   const platform = new TencentPlatform()
 
   it('should match Tencent click URL with click_id and ad=tencent', () => {
-    expect(platform.match(page('https://example.com/click?click_id=abc123&ad=tencent'))).toBe(true)
+    expect(platform.match(toPage('https://example.com/click?click_id=abc123&ad=tencent'))).toBe(true)
   })
 
   it('should not match without ad=tencent', () => {
-    expect(platform.match(page('https://example.com/click?click_id=abc123'))).toBe(false)
+    expect(platform.match(toPage('https://example.com/click?click_id=abc123'))).toBe(false)
   })
 
   it('should not match ordinary URLs', () => {
-    expect(platform.match(page('https://example.com/page?foo=bar'))).toBe(false)
+    expect(platform.match(toPage('https://example.com/page?foo=bar'))).toBe(false)
   })
 
   it('should map action types correctly', () => {
@@ -111,31 +115,6 @@ describe('TencentPlatform', () => {
   })
 })
 
-describe('UrlResolver', () => {
-  it('should parse URL string into PageLocation', () => {
-    const resolver = new UrlResolver('browser')
-    const page = resolver.getPageFromUrl('https://example.com/path?foo=1&bar=2')
-    expect(page).toBeDefined()
-    expect(page!.href).toBe('https://example.com/path?foo=1&bar=2')
-    expect(page!.host).toBe('example.com')
-    expect(page!.protocol).toBe('https')
-    expect(page!.port).toBe('')
-    expect(page!.pathname).toBe('/path')
-    expect(page!.search).toBe('?foo=1&bar=2')
-    expect(page!.query).toEqual({ foo: '1', bar: '2' })
-  })
-
-  it('should return undefined for invalid URL', () => {
-    const resolver = new UrlResolver('browser')
-    expect(resolver.getPageFromUrl('not-a-url')).toBeUndefined()
-  })
-
-  it('should use provided env instead of auto-detection', () => {
-    const resolver = new UrlResolver('browser')
-    expect(resolver.envName).toBe('browser')
-  })
-})
-
 describe('OceanEnginePlatform', () => {
   const platform = new OceanEnginePlatform()
 
@@ -143,16 +122,16 @@ describe('OceanEnginePlatform', () => {
     'https://example.com/click?ad=oceanengine&clickid=abc123def456&adid=789012&creative_id=345678'
 
   it('should match OceanEngine click URL with clickid and ad=oceanengine', () => {
-    expect(platform.match(page('https://example.com/click?clickid=abc123&ad=oceanengine'))).toBe(true)
+    expect(platform.match(toPage('https://example.com/click?clickid=abc123&ad=oceanengine'))).toBe(true)
   })
 
   it('should not match without ad=oceanengine', () => {
-    expect(platform.match(page('https://example.com/click?clickid=abc123'))).toBe(false)
+    expect(platform.match(toPage('https://example.com/click?clickid=abc123'))).toBe(false)
   })
 
   it('should not match ordinary URLs', () => {
-    expect(platform.match(page('https://example.com/page?foo=bar'))).toBe(false)
-    expect(platform.match(page('https://example.com/click?foo=bar'))).toBe(false)
+    expect(platform.match(toPage('https://example.com/page?foo=bar'))).toBe(false)
+    expect(platform.match(toPage('https://example.com/click?foo=bar'))).toBe(false)
   })
 
   it('should map action types to OceanEngine string values', () => {
@@ -168,7 +147,7 @@ describe('OceanEnginePlatform', () => {
 
     const tracker = new AdTracker({ storage: new MemoryStorage(), handler })
     tracker.use(new OceanEnginePlatform())
-    tracker.init(oceanClickUrl)
+    tracker.init(toPage(oceanClickUrl))
 
     await tracker.report({ action_type: ActionType.PURCHASE })
 
@@ -181,6 +160,6 @@ describe('OceanEnginePlatform', () => {
   })
 
   it('should NOT match Tencent click URL with click_id (different param name)', () => {
-    expect(platform.match(page('https://example.com/click?click_id=abc&ad=oceanengine'))).toBe(false)
+    expect(platform.match(toPage('https://example.com/click?click_id=abc&ad=oceanengine'))).toBe(false)
   })
 })

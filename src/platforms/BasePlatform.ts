@@ -1,7 +1,8 @@
 import { genUuid } from "../Uuid";
 import { ActionType } from "../ActionType";
 import type { IStorage } from "../Storage";
-import type { PageLocation } from "../UrlResolver";
+import type { PageLocation } from "../PageLocation";
+import { Logger, LogLevel } from "../Logger";
 
 /** 广告点击链接携带的参数（key-value 形式） */
 export interface ClickParams {
@@ -48,7 +49,7 @@ export interface PlatformConfig {
   storage?: IStorage;
   handler?: ReportHandler;
   getUid?: GetUid;
-  debug?: boolean;
+  logLevel?: LogLevel;
 }
 
 /** 平台适配器接口 */
@@ -71,6 +72,8 @@ export interface Platform {
   buildPayload(event: Event): Promise<Payload | null>;
   /** 上报转化事件 */
   report(event: Event): Promise<void>;
+  /** 释放资源 */
+  dispose(): void;
   /** 存储 key，格式 AD_PARAMS_{NAME}[_{TAG}] */
   readonly storageKey: string;
 }
@@ -94,8 +97,16 @@ export abstract class BasePlatform implements Platform {
   protected storage?: IStorage;
   protected handler?: ReportHandler;
   protected getUid?: GetUid;
-  protected debug = false;
   protected options: PlatformOptions;
+
+  private _logger?: Logger;
+
+  protected get logger(): Logger {
+    if (!this._logger) {
+      this._logger = new Logger(this.name, LogLevel.NONE);
+    }
+    return this._logger;
+  }
 
   constructor(options: PlatformOptions = {}) {
     this.options = options;
@@ -112,13 +123,7 @@ export abstract class BasePlatform implements Platform {
     if (config.storage !== undefined) this.storage = config.storage;
     if (config.handler !== undefined) this.handler = config.handler;
     if (config.getUid !== undefined) this.getUid = config.getUid;
-    if (config.debug !== undefined) this.debug = config.debug;
-  }
-
-  protected log(method: string, ...args: unknown[]): void {
-    if (this.debug) {
-      console.log(`[ad-tracker] ${this.constructor.name}.${method} -`, ...args);
-    }
+    if (config.logLevel !== undefined) this.logger.setLevel(config.logLevel);
   }
 
   /**
@@ -126,14 +131,17 @@ export abstract class BasePlatform implements Platform {
    * 优先使用构造参数传入的 options.match，否则使用子类的 defaultMatch
    */
   match(page: PageLocation): boolean {
-    return this.options.match
+    const result = this.options.match
       ? this.options.match(page)
       : this.defaultMatch(page);
+    this.logger.debug(`页面归属平台判断 [${this.name}]=${result}`, page);
+    return result;
   }
 
   /** 覆盖或追加 ActionType → 平台事件的映射 */
   setActionMap(map: Record<number, string | number>): void {
     Object.assign(this.actionMap, map);
+    this.logger.debug("设置事件映射表", { name: this.name, map });
   }
 
   /** 将 ActionType 枚举转为平台实际的事件类型 */
@@ -151,22 +159,22 @@ export abstract class BasePlatform implements Platform {
     const filtered = { ...page.query };
     delete filtered.ad;
     this.storage?.set(this.storageKey, JSON.stringify(filtered));
-    this.log("savePage", filtered);
+    this.logger.debug("缓存页面广告参数", {
+      name: this.name,
+      params: filtered,
+    });
   }
 
   /** 从存储读取广告参数，无缓存时返回 null */
   loadParams(): ClickParams | null {
     const raw = this.storage?.get(this.storageKey);
     if (!raw) {
-      this.log("loadParams", "no stored params");
       return null;
     }
     try {
       const params = JSON.parse(raw);
-      this.log("loadParams", params);
       return params;
     } catch {
-      this.log("loadParams", "parse error", raw);
       return null;
     }
   }
@@ -178,12 +186,10 @@ export abstract class BasePlatform implements Platform {
   async buildPayload(event: Event): Promise<Payload | null> {
     const params = this.loadParams();
     if (!params) {
-      this.log("buildPayload", "no stored params");
       return null;
     }
     const uid = this.getUid ? await this.getUid(this.name) : undefined;
     const uuid = genUuid();
-    const { match, ...payloadOptions } = this.options;
     return {
       ...event,
       params,
@@ -191,7 +197,7 @@ export abstract class BasePlatform implements Platform {
       action_time: Date.now(),
       uid,
       uuid,
-      options: payloadOptions,
+      options: this.options,
     };
   }
 
@@ -201,21 +207,25 @@ export abstract class BasePlatform implements Platform {
    */
   async report(event: Event): Promise<void> {
     if (!this.handler) {
-      this.log("report", "skipped, no handler configured");
+      this.logger.warn("handler 未配置，跳过上报", event);
       return;
     }
     const payload = await this.buildPayload(event);
     if (!payload) {
-      this.log("report", "skipped, no stored params");
+      this.logger.warn("无缓存广告参数，跳过上报", event);
       return;
     }
-    this.log("report2", payload);
+    this.logger.debug("上报载荷数据", payload);
     try {
       const result = await this.handler(this.name, payload);
-      this.log("report", "handler result:", result);
+      this.logger.debug("上报回调结果", result);
     } catch (err) {
-      this.log("report", "handler error:", err);
+      this.logger.error("上报过程异常", { payload, error: err });
     }
+  }
+
+  dispose(): void {
+    this.logger.dispose();
   }
 
   /** storageKey 格式：AD_PARAMS_{NAME}[_{TAG}] */
