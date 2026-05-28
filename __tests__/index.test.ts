@@ -76,9 +76,8 @@ describe('AdTracker', () => {
 
     expect(handler).toHaveBeenCalledTimes(1)
 
-    const [platform, tag, payload] = handler.mock.calls[0]
+    const [platform, payload] = handler.mock.calls[0]
     expect(platform).toBe('tencent')
-    expect(tag).toBeUndefined()
     expect(payload.params.account_id).toBe('9471147')
     expect(payload.params.ad).toBeUndefined()
     expect(payload.action_type).toBe('REGISTER')
@@ -173,9 +172,8 @@ describe('OceanEnginePlatform', () => {
 
     await tracker.report({ action_type: ActionType.PURCHASE })
 
-    const [platform, tag, payload] = handler.mock.calls[0]
+    const [platform, payload] = handler.mock.calls[0]
     expect(platform).toBe('oceanengine')
-    expect(tag).toBeUndefined()
     expect(payload.params.clickid).toBe('abc123def456')
     expect(payload.params.ad).toBeUndefined()
     expect(payload.action_type).toBe('active_pay')

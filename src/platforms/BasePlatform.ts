@@ -11,6 +11,7 @@ export interface ClickParams {
 /** 用户上报时传入的事件（action_type 必填，其余字段自由扩展） */
 export interface Event {
   action_type: ActionType;
+  current_url?: string;
   [key: string]: unknown;
 }
 
@@ -28,7 +29,6 @@ export interface Payload {
 /** 用户自定义上报回调 */
 export type ReportHandler = (
   platform: string,
-  tag: string | undefined,
   payload: Payload,
 ) => Promise<unknown>;
 
@@ -183,6 +183,7 @@ export abstract class BasePlatform implements Platform {
     }
     const uid = this.getUid ? await this.getUid(this.name) : undefined;
     const uuid = uuidv4();
+    const { match, ...payloadOptions } = this.options;
     return {
       ...event,
       params,
@@ -190,7 +191,7 @@ export abstract class BasePlatform implements Platform {
       action_time: Date.now(),
       uid,
       uuid,
-      options: this.options,
+      options: payloadOptions,
     };
   }
 
@@ -210,7 +211,7 @@ export abstract class BasePlatform implements Platform {
     }
     this.log("report", payload);
     try {
-      const result = await this.handler(this.name, this.options.tag, payload);
+      const result = await this.handler(this.name, payload);
       this.log("report", "handler result:", result);
     } catch (err) {
       this.log("report", "handler error:", err);
