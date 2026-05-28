@@ -1,6 +1,6 @@
 import { BasePlatform } from "./BasePlatform";
 import { ActionType } from "../ActionType";
-import type { PageLocation } from "../UrlResolver";
+import type { PageLocation } from "../PageLocation";
 
 /**
  * 腾讯广告平台适配器

@@ -2,10 +2,11 @@
 
 export { AdTracker } from './AdTracker'
 export type { Config } from './AdTracker'
-export { UrlResolver } from './UrlResolver'
-export type { PageLocation } from './UrlResolver'
+export { toPage } from './PageLocation'
+export type { PageLocation } from './PageLocation'
 export { genUuid } from './Uuid'
 export { ActionType } from './ActionType'
+export { Logger, LogLevel } from './Logger'
 export { BasePlatform } from './platforms/BasePlatform'
 export type { PlatformOptions, ClickParams, Event, Payload, Platform, ReportHandler, GetUid } from './platforms/BasePlatform'
 export { TencentPlatform } from './platforms/TencentPlatform'

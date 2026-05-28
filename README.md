@@ -140,9 +140,9 @@ import { AdTracker } from '@chihqiang/ad-tracker'
 const tracker = new AdTracker({
   handler?: ReportHandler   // 上报回调，接收 (platform, payload)
   storage?: IStorage        // 存储方式，默认 localStorage（浏览器）或内存
-  debug?: boolean           // 开启调试日志，默认 false
+  debug?: boolean           // 开启调试日志，默认 false（等同于 LogLevel.DEBUG）
+  logger?: Logger           // 自定义日志实例，可控制日志级别
   getUid?: GetUid           // 获取 uid 的回调，传入平台名，返回 Promise<string | number>
-  urlResolver?: UrlResolver // URL 解析器，默认自动检测环境（浏览器 / 小程序）
 })
 ```
 
@@ -155,13 +155,18 @@ tracker.use(new TencentPlatform())
 tracker.use(new BaiduPlatform())
 ```
 
-#### .init(url?)
+#### .init(page?)
 
-解析 URL 中的广告参数，按平台分别存储。不传参时默认读取 `window.location.href`。
+解析页面中的广告参数，按平台分别存储。不传参时默认读取 `window.location`。返回 `this` 支持链式调用。
 
 ```typescript
-const matched = tracker.init()
-// matched: ['tencent', 'baidu']  — 返回所有匹配到的平台名，未匹配返回 []
+tracker.init()
+// 或传入 PageLocation
+import { toPage } from '@chihqiang/ad-tracker'
+tracker.init(toPage('https://example.com/click?click_id=abc&ad=tencent')).report({ action_type: ActionType.REGISTER })
+
+// 小程序环境
+tracker.init(toPage('pages/index/index?click_id=abc&ad=tencent'))
 ```
 
 #### .report(event)
@@ -174,6 +179,14 @@ await tracker.report({
   uid: 'user_123',                    // 自定义参数
 })
 // action_time 由 SDK 自动填充 Date.now()，无需传入
+```
+
+#### .dispose()
+
+释放所有平台资源和日志输出。
+
+```typescript
+tracker.dispose()
 ```
 
 ### BasePlatform
@@ -189,6 +202,8 @@ await tracker.report({
 | `defaultMatch()` | 判断页面是否属于本平台的匹配规则 |
 
 BasePlatform 内置 `match()` 方法的优先级：**`options.match` > `defaultMatch()`**。即构造时传入 `match` 可覆盖子类默认规则。
+
+每个平台实例拥有独立的 Logger，tag 为类名（如 `TencentPlatform`），日志前缀 `【AD-TRACKER.TencentPlatform】`。
 
 #### PlatformOptions
 
@@ -257,6 +272,59 @@ payload 结构：
 }
 ```
 
+### Logger
+
+日志工具，按级别控制输出。`AdTracker` 构造时可传入自定义 Logger 实例。
+
+```typescript
+import { Logger, LogLevel } from '@chihqiang/ad-tracker'
+
+// 自定义日志级别
+const tracker = new AdTracker({
+  logger: new Logger('AdTracker', LogLevel.WARN),  // 仅输出 warn / error
+})
+
+// 或简写为 debug: true（等价于 LogLevel.DEBUG）
+const tracker = new AdTracker({ debug: true })
+```
+
+级别枚举（数字越小越详细）：
+
+| LogLevel | 值 | 说明 |
+|----------|----|------|
+| `DEBUG` | 0 | 全部输出 |
+| `INFO` | 1 | 常规信息 |
+| `WARN` | 2 | 警告 |
+| `ERROR` | 3 | 错误 |
+| `NONE` | 4 | 关闭所有日志 |
+
+```typescript
+const logger = new Logger('MyTag')
+
+logger.debug('查询用户信息', { userId: 123 })  // 对象参数在控制台可展开
+logger.info('操作成功')
+logger.warn('接口超时', { url: '/api' })
+logger.error('程序异常', { error: new Error('timeout') })
+
+// 也支持按级别写入
+logger.log(LogLevel.DEBUG, '查询用户信息', { userId: 123 })
+
+logger.setLevel(LogLevel.INFO)    // 运行时动态调整级别
+logger.dispose()                  // 释放日志（关闭输出）
+```
+
+日志输出格式：
+
+```
+[2026-05-29 12:00:00] 【AD-TRACKER.MyTag】 DEBUG 查询用户信息 {userId: 123}
+[2026-05-29 12:00:00] 【AD-TRACKER.MyTag】 WARN 接口超时
+[2026-05-29 12:00:00] 【AD-TRACKER.MyTag】 ERROR 程序异常 {error: {}}
+```
+
+- 时间戳精确到秒
+- `【AD-TRACKER.tag】` 标识来源，tag 为传入的标识名
+- 仅对象类型的 data 会展开输出到控制台，字符串/原始值不输出
+
 ### IStorage
 
 存储接口，浏览器环境默认使用 `localStorage`（跨页面不丢失），Node/SSR 环境回退到内存存储。
@@ -269,44 +337,37 @@ const tracker = new AdTracker({
 })
 ```
 
-### UrlResolver
-
-URL 解析器，自动检测运行环境（浏览器 / 微信 / 支付宝 / 抖音 / 快手 / 百度小程序），返回结构化页面信息。
-
-```typescript
-import { UrlResolver } from '@chihqiang/ad-tracker'
-
-// 自动检测环境
-const resolver = new UrlResolver()
-
-// 手动指定环境
-const resolver = new UrlResolver('wx')
-
-resolver.envName          // 当前环境，如 'browser' | 'wx' | 'alipay'
-resolver.getCurrentUrl()  // 当前页面 URL 字符串
-resolver.getCurrentPage() // PageLocation 对象
-resolver.getPageFromUrl('https://example.com?a=1') // 从 URL 字符串解析
-```
-
 ### PageLocation
+
+页面结构化信息，浏览器环境包含完整 URL 字段，小程序环境仅 `href` / `pathname` / `search` / `query` 有值。
 
 ```typescript
 interface PageLocation {
-  href: string                      // 完整 URL / 小程序 path?query
-  host: string                      // 域名（小程序为空）
-  protocol: string                  // 协议（小程序为空）
-  port: string                      // 端口（小程序为空）
-  pathname: string                  // 路径
-  search: string                    // 查询字符串
-  query: Record<string, string>     // 解析后的查询参数对象
+  href: string                       // 完整 URL（浏览器），或 path?query（小程序）
+  host?: string                      // 域名，小程序无此字段
+  protocol?: string                  // 协议，小程序无此字段
+  port?: string                      // 端口，小程序无此字段
+  pathname: string                   // 路径
+  search: string                     // 查询字符串（含 ?）
+  query: Record<string, string>      // 解析后的查询参数
 }
 ```
 
-`.init()` 内部流程：
+### toPage
 
-1. `resolver.getPageFromUrl(url)` 解析传入 URL，或 `resolver.getCurrentPage()` 自动获取当前页面，得到 `PageLocation`
-2. 遍历已注册平台，调用 `platform.match(page)` — 优先用 `options.match`，否则走 `defaultMatch()`
-3. 匹配成功的平台调用 `platform.savePage(page)` — 从 `page.query` 提取参数，过滤 `ad` 后缓存
+将 href 字符串解析为 `PageLocation`，同时支持浏览器 URL 和小程序 `path?query` 格式。
+
+```typescript
+import { toPage } from '@chihqiang/ad-tracker'
+
+// 浏览器 URL → 包含 host / protocol / port
+const page = toPage('https://example.com/click?click_id=abc&ad=tencent')
+// { href: '...', host: 'example.com', protocol: 'https', port: '', pathname: '/click', search: '?...', query: { click_id: 'abc', ad: 'tencent' } }
+
+// 小程序 path?query → 仅 href / pathname / search / query 有值
+const page = toPage('pages/index/index?click_id=abc&ad=tencent')
+// { href: '...', pathname: '/pages/index/index', search: '?...', query: { click_id: 'abc', ad: 'tencent' } }
+```
 
 ### genUuid
 
