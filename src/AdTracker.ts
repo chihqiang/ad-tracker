@@ -56,6 +56,11 @@ export class AdTracker {
     return this;
   }
 
+  /** 获取所有已注册平台 */
+  getPlatforms(): Platform[] {
+    return this.platforms;
+  }
+
   /**
    * 解析页面并匹配平台，将参数存储到各平台
    * @param page - 页面结构化信息，默认读取 window.location
@@ -105,7 +110,15 @@ export class AdTracker {
       ? event
       : { ...event, current_url: this.pageLocation?.href ?? "" };
     this.logger.debug("转换事件上报", enriched);
-    await Promise.all(this.platforms.map((p) => p.report(enriched)));
+    await Promise.all(
+      this.platforms.map(async (p) => {
+        try {
+          await p.report(enriched);
+        } catch (err) {
+          this.logger.warn("平台上报失败", { platform: p.name, error: err });
+        }
+      })
+    );
   }
 
 }

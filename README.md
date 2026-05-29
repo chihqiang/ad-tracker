@@ -203,7 +203,7 @@ tracker.dispose()
 
 BasePlatform 内置 `match()` 方法的优先级：**`options.match` > `defaultMatch()`**。即构造时传入 `match` 可覆盖子类默认规则。
 
-每个平台实例拥有独立的 Logger，tag 为类名（如 `TencentPlatform`），日志前缀 `【AD-TRACKER.TencentPlatform】`。
+每个平台实例拥有独立的 Logger，tag 为平台 `name`（如 `"tencent"`），日志前缀 `【AD-TRACKER.tencent】`。
 
 #### PlatformOptions
 
@@ -281,7 +281,7 @@ import { Logger, LogLevel } from '@chihqiang/ad-tracker'
 
 // 自定义日志级别
 const tracker = new AdTracker({
-  logger: new Logger('AdTracker', LogLevel.WARN),  // 仅输出 warn / error
+  logger: new Logger('AdTracker', LogLevel.WARN),  // 仅输出 warn
 })
 
 // 或简写为 debug: true（等价于 LogLevel.DEBUG）
@@ -293,23 +293,19 @@ const tracker = new AdTracker({ debug: true })
 | LogLevel | 值 | 说明 |
 |----------|----|------|
 | `DEBUG` | 0 | 全部输出 |
-| `INFO` | 1 | 常规信息 |
-| `WARN` | 2 | 警告 |
-| `ERROR` | 3 | 错误 |
-| `NONE` | 4 | 关闭所有日志 |
+| `WARN` | 1 | 仅输出警告 |
+| `NONE` | 2 | 关闭所有日志 |
 
 ```typescript
 const logger = new Logger('MyTag')
 
 logger.debug('查询用户信息', { userId: 123 })  // 对象参数在控制台可展开
-logger.info('操作成功')
 logger.warn('接口超时', { url: '/api' })
-logger.error('程序异常', { error: new Error('timeout') })
 
 // 也支持按级别写入
 logger.log(LogLevel.DEBUG, '查询用户信息', { userId: 123 })
 
-logger.setLevel(LogLevel.INFO)    // 运行时动态调整级别
+logger.setLevel(LogLevel.WARN)   // 运行时动态调整级别
 logger.dispose()                  // 释放日志（关闭输出）
 ```
 
@@ -318,7 +314,6 @@ logger.dispose()                  // 释放日志（关闭输出）
 ```
 [2026-05-29 12:00:00] 【AD-TRACKER.MyTag】 DEBUG 查询用户信息 {userId: 123}
 [2026-05-29 12:00:00] 【AD-TRACKER.MyTag】 WARN 接口超时
-[2026-05-29 12:00:00] 【AD-TRACKER.MyTag】 ERROR 程序异常 {error: {}}
 ```
 
 - 时间戳精确到秒
