@@ -6,3 +6,9 @@ export enum ActionType {
   CLAIM_OFFER,  // 领取优惠
   VIEW,         // 浏览内容
 }
+
+/** 内置广告平台名称枚举 */
+export enum PlatformName {
+  TENCENT = "tencent",
+  OCEAN_ENGINE = "oceanengine",
+}

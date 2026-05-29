@@ -1,5 +1,5 @@
 import { BasePlatform } from "./BasePlatform";
-import { ActionType } from "../ActionType";
+import { ActionType, PlatformName } from "../Types";
 import type { PageLocation } from "../PageLocation";
 
 /**
@@ -13,7 +13,7 @@ import type { PageLocation } from "../PageLocation";
  * 开发者专区首页：https://developers.e.qq.com/docs
  */
 export class TencentPlatform extends BasePlatform {
-  readonly name = "tencent";
+  readonly name = PlatformName.TENCENT;
   actionMap: Record<number, string | number> = {
     [ActionType.REGISTER]: "REGISTER",
     [ActionType.RESERVATION]: "RESERVATION",

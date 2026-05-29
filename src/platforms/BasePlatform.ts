@@ -1,5 +1,5 @@
 import { genUuid } from "../Uuid";
-import { ActionType } from "../ActionType";
+import { ActionType } from "../Types";
 import type { IStorage } from "../Storage";
 import type { PageLocation } from "../PageLocation";
 import { Logger, LogLevel } from "../Logger";
@@ -70,6 +70,8 @@ export interface Platform {
   loadParams(): ClickParams | null;
   /** 组装完整上报载荷 */
   buildPayload(event: Event): Promise<Payload | null>;
+  /** 检查是否可上报，不可上报则抛出异常 */
+  checkReportable(event: Event): Promise<Payload>;
   /** 上报转化事件 */
   report(event: Event): Promise<void>;
   /** 释放资源 */
@@ -202,25 +204,32 @@ export abstract class BasePlatform implements Platform {
   }
 
   /**
+   * 检查是否可上报，不可上报则抛出异常
+   * @returns 组装好的 payload
+   */
+  async checkReportable(event: Event): Promise<Payload> {
+    if (!this.handler) {
+      throw new Error("handler 未配置");
+    }
+    const payload = await this.buildPayload(event);
+    if (!payload) {
+      throw new Error("无缓存广告参数");
+    }
+    return payload;
+  }
+
+  /**
    * 上报转化事件
    * 组装 payload 后交由 handler 处理
    */
   async report(event: Event): Promise<void> {
-    if (!this.handler) {
-      this.logger.warn("handler 未配置，跳过上报", event);
-      return;
-    }
-    const payload = await this.buildPayload(event);
-    if (!payload) {
-      this.logger.warn("无缓存广告参数，跳过上报", event);
-      return;
-    }
+    const payload = await this.checkReportable(event);
     this.logger.debug("上报载荷数据", payload);
     try {
-      const result = await this.handler(this.name, payload);
+      const result = await this.handler!(this.name, payload);
       this.logger.debug("上报回调结果", result);
     } catch (err) {
-      this.logger.error("上报过程异常", { payload, error: err });
+      this.logger.warn("上报过程异常", { payload, error: err });
     }
   }
 

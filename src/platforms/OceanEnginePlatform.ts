@@ -1,5 +1,5 @@
 import { BasePlatform } from "./BasePlatform";
-import { ActionType } from "../ActionType";
+import { ActionType, PlatformName } from "../Types";
 import type { PageLocation } from "../PageLocation";
 
 /**
@@ -14,7 +14,7 @@ import type { PageLocation } from "../PageLocation";
  * 上报事件列表：https://event-manager.oceanengine.com/docs/8650/all_events
  */
 export class OceanEnginePlatform extends BasePlatform {
-  readonly name = "oceanengine";
+  readonly name = PlatformName.OCEAN_ENGINE;
   actionMap: Record<number, string | number> = {
     [ActionType.REGISTER]: "active_register",
     [ActionType.RESERVATION]: "form",

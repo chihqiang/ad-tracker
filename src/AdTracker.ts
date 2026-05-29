@@ -110,7 +110,15 @@ export class AdTracker {
       ? event
       : { ...event, current_url: this.pageLocation?.href ?? "" };
     this.logger.debug("转换事件上报", enriched);
-    await Promise.all(this.platforms.map((p) => p.report(enriched)));
+    await Promise.all(
+      this.platforms.map(async (p) => {
+        try {
+          await p.report(enriched);
+        } catch (err) {
+          this.logger.warn("平台上报失败", { platform: p.name, error: err });
+        }
+      })
+    );
   }
 
 }

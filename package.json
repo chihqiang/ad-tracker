@@ -1,6 +1,6 @@
 {
   "name": "@chihqiang/ad-tracker",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "ad-tracker 是一款轻量的 TypeScript 广告追踪 SDK。可自动解析链接中的广告参数、缓存数据并完成上报，兼容各类主流广告平台，接入简单、扩展性强。",
   "scripts": {
     "dev": "tsup --watch",

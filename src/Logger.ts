@@ -1,18 +1,14 @@
 /** 日志级别，数字越小越详细 */
 export enum LogLevel {
   DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3,
+  WARN = 1,
   /** 关闭所有日志 */
-  NONE = 4,
+  NONE = 2,
 }
 
 const LEVEL_NAMES: Record<LogLevel, string> = {
   [LogLevel.DEBUG]: "DEBUG",
-  [LogLevel.INFO]: "INFO",
   [LogLevel.WARN]: "WARN",
-  [LogLevel.ERROR]: "ERROR",
   [LogLevel.NONE]: "NONE",
 }
 
@@ -78,17 +74,8 @@ export class Logger {
     this.log(LogLevel.DEBUG, action, data)
   }
 
-  info(action: string, data?: unknown): void {
-    this.log(LogLevel.INFO, action, data)
-  }
-
   warn(action: string, data?: unknown): void {
     if (this.level > LogLevel.WARN) return
     console.warn(`${formatTimestamp()} 【AD-TRACKER.${this.tag}】 ${LEVEL_NAMES[LogLevel.WARN]} ${action}`, data && typeof data === "object" ? data : "")
-  }
-
-  error(action: string, data?: unknown): void {
-    if (this.level > LogLevel.ERROR) return
-    console.error(`${formatTimestamp()} 【AD-TRACKER.${this.tag}】 ${LEVEL_NAMES[LogLevel.ERROR]} ${action}`, data && typeof data === "object" ? data : "")
   }
 }
