@@ -56,6 +56,11 @@ export class AdTracker {
     return this;
   }
 
+  /** 获取所有已注册平台 */
+  getPlatforms(): Platform[] {
+    return this.platforms;
+  }
+
   /**
    * 解析页面并匹配平台，将参数存储到各平台
    * @param page - 页面结构化信息，默认读取 window.location

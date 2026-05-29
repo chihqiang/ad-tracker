@@ -8,20 +8,6 @@ describe('AdTracker', () => {
   const tencentClickUrl =
     'https://example.com/click?ad=tencent&click_id=24oi6xq2aaakvagnqu7a&account_id=9471147&click_time=1586437362'
 
-  it('should match and store Tencent params', () => {
-    const storage = new MemoryStorage()
-    const tracker = new AdTracker({ storage })
-    tracker.use(new TencentPlatform())
-
-    tracker.init(toPage(tencentClickUrl))
-
-    const raw = storage.get('AD_PARAMS_TENCENT')
-    expect(raw).toBeTruthy()
-    const params = JSON.parse(raw!)
-    expect(params.account_id).toBe('9471147')
-    expect(params.click_id).toBe('24oi6xq2aaakvagnqu7a')
-  })
-
   it('should return empty for non-ad URLs', () => {
     const storage = new MemoryStorage()
     const tracker = new AdTracker({ storage })

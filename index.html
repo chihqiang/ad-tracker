@@ -146,16 +146,14 @@
     tracker.use(new TencentPlatform())
     tracker.use(new OceanEnginePlatform())
 
-    const matched = tracker.init()
+    tracker.init()
 
     statusEl.innerHTML = `
-      <div>平台数: <span class="tag">${tracker.platforms?.length ?? 0}</span></div>
-      <div>匹配平台: ${matched.length ? matched.map(n => `<span class="tag">${n}</span>`).join('') : '<span class="tag" style="background:#fce8e6;color:#c5221f">未匹配</span>'}</div>
+      <div>已注册平台: ${tracker.getPlatforms().map(p => `<span class="tag">${p.name}</span>`).join('')}</div>
+      <div>init() 完成，日志请查看控制台</div>
     `
 
-    matchEl.textContent = matched.length
-      ? `匹配到平台: ${matched.join(', ')}`
-      : '当前 URL 未匹配任何广告平台'
+    matchEl.textContent = '页面已解析，查看控制台日志获取匹配详情'
 
     window.tracker = tracker
 
