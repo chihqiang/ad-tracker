@@ -1,5 +1,4 @@
-/// <reference types="jest" />
-
+import { describe, it, expect } from 'vitest'
 import { toPage } from '../src'
 
 describe('toPage', () => {
@@ -60,17 +59,9 @@ describe('toPage', () => {
 })
 
 describe('getLocationPage', () => {
-  const originalWindow = globalThis.window
+  it('should return PageLocation from window.location', async () => {
+    const originalWindow = globalThis.window
 
-  afterAll(() => {
-    Object.defineProperty(globalThis, 'window', {
-      value: originalWindow,
-      writable: true,
-      configurable: true,
-    })
-  })
-
-  it('should return PageLocation from window.location', () => {
     Object.defineProperty(globalThis, 'window', {
       value: {
         location: {
@@ -88,10 +79,17 @@ describe('getLocationPage', () => {
       writable: true,
       configurable: true,
     })
-    const { getLocationPage } = jest.requireActual('../src/PageLocation')
+
+    const { getLocationPage } = await vi.importActual<typeof import('../src/PageLocation')>('../src/PageLocation')
     const p = getLocationPage()
     expect(p).toBeDefined()
     expect(p!.href).toBe('https://demo.com/page?foo=1')
     expect(p!.query).toEqual({ foo: '1' })
+
+    Object.defineProperty(globalThis, 'window', {
+      value: originalWindow,
+      writable: true,
+      configurable: true,
+    })
   })
 })
