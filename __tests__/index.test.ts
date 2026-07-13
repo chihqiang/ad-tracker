@@ -1,6 +1,6 @@
-/// <reference types="jest" />
+import { describe, it, expect, vi } from 'vitest'
 
-jest.mock('../src/Uuid', () => ({ genUuid: () => '00000000-0000-0000-0000-000000000000' }))
+vi.mock('../src/Uuid', () => ({ genUuid: () => '00000000-0000-0000-0000-000000000000' }))
 
 import { AdTracker, TencentPlatform, OceanEnginePlatform, MemoryStorage, ActionType, toPage } from '../src'
 
@@ -44,7 +44,7 @@ describe('AdTracker', () => {
   })
 
   it('should skip platforms without stored params', async () => {
-    const handler = jest.fn()
+    const handler = vi.fn()
     const tracker = new AdTracker({
       storage: new MemoryStorage(),
       handler,
@@ -56,7 +56,7 @@ describe('AdTracker', () => {
   })
 
   it('should call handler with mapped payload', async () => {
-    const handler = jest.fn()
+    const handler = vi.fn()
 
     const tracker = new AdTracker({ storage: new MemoryStorage(), handler })
     tracker.use(new TencentPlatform())
@@ -129,7 +129,7 @@ describe('OceanEnginePlatform', () => {
   })
 
   it('should call handler with string action_type in payload', async () => {
-    const handler = jest.fn()
+    const handler = vi.fn()
 
     const tracker = new AdTracker({ storage: new MemoryStorage(), handler })
     tracker.use(new OceanEnginePlatform())
